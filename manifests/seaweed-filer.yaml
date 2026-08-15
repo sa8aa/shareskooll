@@ -1,0 +1,54 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweed-filer
+  namespace: edushare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seaweed-filer
+  template:
+    metadata:
+      labels:
+        app: seaweed-filer
+    spec:
+      initContainers:
+        - name: wait-for-master-and-volume
+          image: busybox:1.36
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z seaweed-master 9333; do echo waiting for seaweed-master; sleep 2; done
+              until nc -z seaweed-volume 8080; do echo waiting for seaweed-volume; sleep 2; done
+      containers:
+        - name: seaweed-filer
+          image: chrislusf/seaweedfs
+          args:
+            - filer
+            - -master=seaweed-master:9333
+            - -ip=seaweed-filer
+            - -defaultReplicaPlacement=000
+          env:
+            - name: WEED_FILER_OPTIONS_DOWNLOAD_DISPOSITION
+              value: "inline"
+          ports:
+            - containerPort: 8888
+            - containerPort: 8111
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweed-filer
+  namespace: edushare
+spec:
+  selector:
+    app: seaweed-filer
+  ports:
+    - name: filer-api
+      port: 8888
+      targetPort: 8888
+    - name: metrics
+      port: 8111
+      targetPort: 8111

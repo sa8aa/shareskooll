@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweed-master
+  namespace: edushare
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seaweed-master
+  template:
+    metadata:
+      labels:
+        app: seaweed-master
+    spec:
+      containers:
+        - name: seaweed-master
+          image: chrislusf/seaweedfs
+
+          args: ["master", "-ip=seaweed-master"]
+          ports:
+            - containerPort: 9333
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweed-master
+  namespace: edushare
+spec:
+  selector:
+    app: seaweed-master
+  ports:
+    - port: 9333
+      targetPort: 9333

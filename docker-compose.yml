@@ -1,0 +1,91 @@
+services:
+  embeddings:
+    image: hwdsl2/embeddings-server
+    container_name: embeddings
+    restart: always
+    environment:
+      - EMBEDDING_MODEL=BAAI/bge-m3
+    volumes:
+      - ./embeddings-data:/var/lib/embeddings
+    ports:
+      - "8000:8000"
+    networks:
+      - edushare-network
+ 
+      
+  # PostgreSQL Database
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: edushare-postgres
+    environment:
+      POSTGRES_DB: edushare
+      POSTGRES_USER: edushare_user
+      POSTGRES_PASSWORD: edushare_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - edushare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U edushare_user -d edushare"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Infrastructure Services
+  seaweed-master:
+    image: chrislusf/seaweedfs
+    command: "master -ip=seaweed-master"
+    ports:
+      - "9333:9333"
+    networks:
+      - edushare-network
+    restart: unless-stopped
+
+  seaweed-volume:
+    image: chrislusf/seaweedfs
+    command: "volume -max=5 -mserver=seaweed-master:9333 -port=8080 -ip=seaweed-volume"
+    ports:
+      - "8080:8080"
+    depends_on:
+      - seaweed-master
+    networks:
+      - edushare-network
+    restart: unless-stopped
+
+  seaweed-filer:
+    image: chrislusf/seaweedfs
+    command: "filer -master=seaweed-master:9333 -ip=seaweed-filer -defaultReplicaPlacement=000"
+    environment:
+      - WEED_FILER_OPTIONS_DOWNLOAD_DISPOSITION=inline
+    ports:
+      - "8888:8888"   # Filer API & UI 
+      - "8111:8111"   # Optional metrics
+    depends_on:
+      - seaweed-master
+      - seaweed-volume
+    networks:
+      - edushare-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - edushare-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+networks:
+  edushare-network:
+    driver: bridge
+
+volumes:
+  postgres_data:

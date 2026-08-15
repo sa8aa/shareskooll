@@ -1,0 +1,71 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: embeddings-ingress
+  namespace: edushare
+spec:
+  rules:
+    - host: embeddings.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: embeddings
+                port:
+                  number: 8000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: seaweed-master-ingress
+  namespace: edushare
+spec:
+  rules:
+    - host: seaweed-master.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: seaweed-master
+                port:
+                  number: 9333
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: seaweed-volume-ingress
+  namespace: edushare
+spec:
+  rules:
+    - host: seaweed-volume.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: seaweed-volume
+                port:
+                  number: 8080
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: seaweed-filer-ingress
+  namespace: edushare
+spec:
+  rules:
+    - host: seaweed-filer.local
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: seaweed-filer
+                port:
+                  number: 8888
