@@ -4,7 +4,7 @@ name: Backend CI
 on:
   push:
     branches:
-      - dev
+      - develop
 
 permissions:
   contents: read
