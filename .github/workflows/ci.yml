@@ -58,7 +58,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ github.sha }}
 
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ github.sha }}
           format: template
@@ -68,6 +68,7 @@ jobs:
           exit-code: '1'
 
       - name: Upload Trivy report (backend)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: trivy-backend-report
@@ -134,7 +135,7 @@ jobs:
             ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }}
 
       - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }}
           format: template
@@ -144,6 +145,7 @@ jobs:
           exit-code: '1'
 
       - name: Upload Trivy report (frontend)
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: trivy-frontend-report
