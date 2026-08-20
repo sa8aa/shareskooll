@@ -28,14 +28,6 @@ jobs:
         working-directory: ./backend
         run: npm run build
 
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v4
-        with:
-          projectBaseDir: ./backend
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -105,14 +97,6 @@ jobs:
         working-directory: ./frontend
         run: npm run build
 
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v4
-        with:
-          projectBaseDir: ./frontend
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -160,3 +144,18 @@ jobs:
           tags: |
             ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:develop
             ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }}
+
+  sonarqube-scan:
+    needs: [backend-build-and-push, frontend-build-and-push]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
