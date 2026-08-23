@@ -3,181 +3,36 @@ on:
   push:
     branches:
       - develop
-permissions:
-  contents: read
-  packages: write
+
 jobs:
-  backend-build-and-push:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
+  sonarqube:
+    uses: ./.github/workflows/sonarqube.yml
+    secrets: inherit
 
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          docker system prune -af
+  frontend:
+    needs: sonarqube
+    uses: ./.github/workflows/frontend.yml
+    secrets: inherit
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
+  trivy-frontend:
+    needs: frontend
+    uses: ./.github/workflows/trivy.yml
+    with:
+      service: frontend
+      image-ref: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }}
+      report-name: trivy-frontend-report
+    secrets: inherit
 
-      - name: Install dependencies
-        working-directory: ./backend
-        run: npm install --legacy-peer-deps
+  backend:
+    needs: trivy-frontend
+    uses: ./.github/workflows/backend.yml
+    secrets: inherit
 
-      - name: Build project
-        working-directory: ./backend
-        run: npm run build
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: false
-          load: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:develop
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ github.sha }}
-
-      - name: Download Trivy HTML template
-        run: curl -sSL -o contrib/html.tpl --create-dirs https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
-
-      - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ github.sha }}
-          format: template
-          template: '@contrib/html.tpl'
-          output: trivy-backend-report.html
-          severity: CRITICAL,HIGH
-          exit-code: '1'
-
-      - name: Upload Trivy report (backend)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-backend-report
-          path: trivy-backend-report.html
-
-      - name: Push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./backend
-          file: ./backend/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:develop
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ github.sha }}
-
-  frontend-build-and-push:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Free disk space
-        run: |
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/share/boost
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
-          docker system prune -af
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Install dependencies
-        working-directory: ./front
-        run: npm ci
-
-      - name: Build project
-        working-directory: ./front
-        run: npm run build
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
-      - name: Log in to GitHub Container Registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Build Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./front
-          file: ./front/Dockerfile
-          push: false
-          load: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:develop
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }}
-
-      - name: Download Trivy HTML template
-        run: curl -sSL -o contrib/html.tpl --create-dirs https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
-
-      - name: Trivy vulnerability scan
-        uses: aquasecurity/trivy-action@v0.36.0
-        with:
-          image-ref: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }}
-          format: template
-          template: '@contrib/html.tpl'
-          output: trivy-frontend-report.html
-          severity: CRITICAL,HIGH
-          exit-code: '1'
-
-      - name: Upload Trivy report (frontend)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: trivy-frontend-report
-          path: trivy-frontend-report.html
-
-      - name: Push Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: ./front
-          file: ./front/Dockerfile
-          push: true
-          tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:develop
-            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }}
-
-  sonarqube-scan:
-    needs: [backend-build-and-push, frontend-build-and-push]
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: SonarQube Scan
-        uses: SonarSource/sonarqube-scan-action@v4
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+  trivy-backend:
+    needs: backend
+    uses: ./.github/workflows/trivy.yml
+    with:
+      service: backend
+      image-ref: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:${{ github.sha }}
+      report-name: trivy-backend-report
+    secrets: inherit

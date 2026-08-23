@@ -1,0 +1,48 @@
+name: Trivy Vulnerability Scan
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+      image-ref:
+        required: true
+        type: string
+      report-name:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  trivy-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download Trivy HTML template
+        run: curl -sSL -o contrib/html.tpl --create-dirs https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
+
+      - name: Trivy vulnerability scan (${{ inputs.service }})
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ inputs.image-ref }}
+          format: template
+          template: '@contrib/html.tpl'
+          output: ${{ inputs.report-name }}.html
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      - name: Upload Trivy report (${{ inputs.service }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.report-name }}
+          path: ${{ inputs.report-name }}.html
