@@ -4,6 +4,10 @@ on:
     branches:
       - develop
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   sonarqube:
     uses: ./.github/workflows/sonarqube.yml
