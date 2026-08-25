@@ -18,4 +18,4 @@ COPY . .
 EXPOSE 3001
 
 # Start development server with webpack (not turbopack)
-CMD ["npm", "run", "dev","prod"]
+CMD ["npm", "run", "dev"]
