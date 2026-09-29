@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: shareschool
+  namespace: argocd
+spec:
+  generators:
+    - list:
+        elements:
+          - stage: dev
+          - stage: prd
+
+  template:
+    metadata:
+      name: shareschool-{{stage}}
+      annotations:
+        kargo.akuity.io/authorized-stage: shareschool-kargo:{{stage}}
+    spec:
+      project: shareschool-project
+      source:
+        repoURL: https://github.com/sa8aa/shareskooll.git
+        targetRevision: stage/{{stage}}
+        path: .
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: shareschool-{{stage}}
+      syncPolicy:
+        syncOptions:
+          - CreateNamespace=true

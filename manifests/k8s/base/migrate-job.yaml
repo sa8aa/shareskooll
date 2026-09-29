@@ -1,0 +1,42 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: shareschool-migrate
+  annotations:
+    # Run BEFORE the app syncs; Argo blocks the rollout until this succeeds, so
+    # the app never starts against an un-migrated schema. `prisma migrate deploy`
+    # is idempotent, so running it on every sync is safe.
+    argocd.argoproj.io/hook: PreSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation,HookSucceeded
+spec:
+  backoffLimit: 2
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          # Tag set by kustomize/Kargo to match the app image.
+          image: ghcr.io/sa8aa/shareschool-migrate
+          # Migrate, then seed reference data. Seeds are idempotent upserts, so
+          # re-running every sync is safe. Scripts run directly (no `--env-file`;
+          # .env isn't in the image — DATABASE_URL comes from envFrom).
+          command:
+            - sh
+            - -lc
+            - >-
+              pnpm prisma:deploy &&
+              npx tsx scripts/seed-categories.ts -y &&
+              npx tsx scripts/seed-governorates.ts -y &&
+              npx tsx scripts/seed-legal.ts -y
+          envFrom:
+            - configMapRef:
+                name: shareschool-config
+            - secretRef:
+                name: shareschool-secrets   # provides DATABASE_URL
+          resources:
+            requests:
+              cpu: "50m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

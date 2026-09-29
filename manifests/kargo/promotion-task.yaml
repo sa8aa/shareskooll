@@ -1,0 +1,124 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: promo-process-prd
+  namespace: shareschool-kargo
+spec:
+  vars:
+    - name: gitopsRepo
+      value: https://github.com/sa8aa/shareskooll.git   
+    - name: imageRepo
+      value: ghcr.io/sa8aa/shareschool                      
+    - name: sourceBranch
+      value: main
+
+  steps:
+    - uses: git-clone
+      config:
+        repoURL: ${{ vars.gitopsRepo }}
+        checkout:
+          - branch: ${{ vars.sourceBranch }}
+            path: ./src
+          - branch: stage/${{ ctx.stage }}
+            create: true
+            path: ./out
+
+    - uses: git-clear
+      config:
+        path: ./out
+
+    - uses: kustomize-set-image
+      as: update
+      config:
+        path: ./src/manifests/k8s/base
+        images:
+          - image: ${{ vars.imageRepo }}
+            tag: ${{ imageFrom(vars.imageRepo).Tag }}
+          - image: ${{ vars.imageRepo }}-migrate
+            tag: ${{ imageFrom(vars.imageRepo).Tag }}
+
+    - uses: kustomize-build
+      config:
+        path: ./src/manifests/k8s/stages/${{ ctx.stage }}
+        outPath: ./out
+
+    - uses: git-commit
+      as: commit
+      config:
+        path: ./out
+        message: ${{ task.outputs.update.commitMessage }}
+
+    - uses: git-push
+      config:
+        path: ./out
+
+    - uses: argocd-update
+      config:
+        apps:
+          - name: shareskool-${{ ctx.stage }}
+            sources:
+              - repoURL: ${{ vars.gitopsRepo }}
+                desiredRevision: ${{ task.outputs.commit.commit }}
+
+---
+apiVersion: kargo.akuity.io/v1alpha1
+kind: PromotionTask
+metadata:
+  name: promo-process-dev
+  namespace: shareschool-kargo
+spec:
+  vars:
+    - name: gitopsRepo
+      value: https://github.com/sa8aa/shareskooll.git   # confirm with `git remote -v`
+    - name: imageRepo
+      value: ghcr.io/sa8aa/shareschool                      # must match the image in ghcr.io
+    - name: sourceBranch
+      value: dev
+
+  steps:
+    - uses: git-clone
+      config:
+        repoURL: ${{ vars.gitopsRepo }}
+        checkout:
+          - branch: ${{ vars.sourceBranch }}
+            path: ./src
+          - branch: stage/${{ ctx.stage }}
+            create: true
+            path: ./out
+
+    - uses: git-clear
+      config:
+        path: ./out
+
+    - uses: kustomize-set-image
+      as: update
+      config:
+        path: ./src/manifests/k8s/base
+        images:
+          - image: ${{ vars.imageRepo }}
+            tag: ${{ imageFrom(vars.imageRepo).Tag }}
+          - image: ${{ vars.imageRepo }}-migrate
+            tag: ${{ imageFrom(vars.imageRepo).Tag }}
+
+    - uses: kustomize-build
+      config:
+        path: ./src/manifests/k8s/stages/${{ ctx.stage }}
+        outPath: ./out
+
+    - uses: git-commit
+      as: commit
+      config:
+        path: ./out
+        message: ${{ task.outputs.update.commitMessage }}
+
+    - uses: git-push
+      config:
+        path: ./out
+
+    - uses: argocd-update
+      config:
+        apps:
+          - name: shareskool-${{ ctx.stage }}
+            sources:
+              - repoURL: ${{ vars.gitopsRepo }}
+                desiredRevision: ${{ task.outputs.commit.commit }}

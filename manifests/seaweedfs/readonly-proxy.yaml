@@ -1,0 +1,139 @@
+# Read-only "guard" in front of the SeaweedFS filer.
+#
+# Why this exists: cdn.shareschool.tn is public. The SeaweedFS filer HTTP API on :8888
+# happily serves GET *and* accepts PUT/POST/DELETE. We must NOT expose writes to
+# the internet. The natural place to block methods (an ingress-nginx
+# `configuration-snippet`) is rejected by ingress-nginx v1.15 (snippets disabled
+# by default, CVE-2023-5043), which silently drops the whole ingress -> 404.
+#
+# So instead we run our OWN nginx pod. We control its config fully, no controller
+# restriction applies. It allows only GET/HEAD/OPTIONS and proxies them to the
+# filer; everything else gets 405. The public ingress points here.
+#
+# Note: the app's own uploads do NOT pass through this proxy. They use the
+# in-cluster filer URL directly (SEAWEED_FILER_URL=http://seaweedfs.seaweedfs.svc:8888),
+# so write functionality is unaffected.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: seaweedfs-cdn-proxy-conf
+data:
+  nginx.conf: |
+    worker_processes auto;
+    error_log /dev/stderr warn;
+    pid /tmp/nginx.pid;
+    events { worker_connections 1024; }
+    http {
+      access_log /dev/stdout;
+      # writable temp paths so the image can run read-only / non-root
+      client_body_temp_path /tmp/client_body;
+      proxy_temp_path       /tmp/proxy;
+      fastcgi_temp_path     /tmp/fastcgi;
+      uwsgi_temp_path       /tmp/uwsgi;
+      scgi_temp_path        /tmp/scgi;
+
+      server {
+        listen 8080;
+        server_name _;
+
+        # Health endpoint for the k8s probes only (NOT proxied to the filer).
+        # Needed because "/" is blocked below, so probes can't use "/".
+        location = /healthz {
+          access_log off;
+          return 200 "ok\n";
+        }
+
+        # PUBLIC: only real files stored flat as /<folder>/<filename>.
+        # The folder is dynamic (products/, stores/, ads/, ...) per the upload
+        # route, so we match the *pattern* "one folder + one file", not a fixed
+        # name. Each [^/]+ is a single path segment with no slash:
+        #   /products/abc.webp        -> served
+        #   /stores/abc.webp          -> served
+        #   /products                 -> blocked (folder listing, one segment)
+        #   /products/sub/abc.webp    -> blocked (three segments)
+        # Still read-only: writes are denied here too.
+        location ~ ^/[^/]+/[^/]+$ {
+          limit_except GET HEAD OPTIONS {
+            deny all;
+          }
+          proxy_pass http://seaweedfs.seaweedfs.svc:8888;
+          proxy_set_header Host              $host;
+          proxy_set_header X-Real-IP         $remote_addr;
+          proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+          proxy_set_header X-Forwarded-Proto $scheme;
+        }
+
+        # BLOCKED: filer root "/", the "/products" listing, and everything else.
+        # 404 so we don't even reveal that a path exists.
+        location / {
+          return 404;
+        }
+      }
+    }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seaweedfs-cdn-proxy
+  labels:
+    app: seaweedfs-cdn-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seaweedfs-cdn-proxy
+  template:
+    metadata:
+      labels:
+        app: seaweedfs-cdn-proxy
+      annotations:
+        # Bump this whenever nginx.conf above changes, so the pod is recreated
+        # and nginx reloads the new config (a ConfigMap edit alone won't restart it).
+        config-revision: "2"
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27-alpine
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+          resources:
+            requests:
+              cpu: "10m"
+              memory: "16Mi"
+            limits:
+              cpu: "100m"
+              memory: "64Mi"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 15
+      volumes:
+        - name: conf
+          configMap:
+            name: seaweedfs-cdn-proxy-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seaweedfs-cdn-proxy
+spec:
+  selector:
+    app: seaweedfs-cdn-proxy
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8080

@@ -1,0 +1,32 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shareschool-ingress
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    # Send www.shareschool.tn -> shareschool.tn (301), preserving the full path + query.
+    # IMPORTANT: do NOT also add a `www.shareschool.tn` rule below. This annotation
+    # AUTO-creates the www redirect server; if www is also listed as a serving
+    # rule it serves the app instead of redirecting. www stays in `tls` so the
+    # auto redirect happens over HTTPS without a cert error.
+    nginx.ingress.kubernetes.io/from-to-www-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - shareschool.tn
+        - www.shareschool.tn
+      secretName: shareschool-prd-tls
+  rules:
+    - host: shareschool.tn
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: shareschool
+                port:
+                  number: 80

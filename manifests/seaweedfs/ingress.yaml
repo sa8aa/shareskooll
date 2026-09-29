@@ -1,0 +1,36 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: seaweedfs-cdn
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+
+    # Read-only enforcement is done by the seaweedfs-cdn-proxy pod (see
+    # readonly-proxy.yaml), NOT by an ingress `configuration-snippet`: ingress-nginx
+    # v1.15 rejects snippet annotations by default (CVE-2023-5043) and would drop
+    # this whole ingress -> cdn.shareschool.tn 404s. So this ingress points at the proxy
+    # Service, which only forwards GET/HEAD/OPTIONS to the filer and blocks writes.
+
+    # CORS so shareschool.tn / dev.shareschool.tn can fetch + re-crop images client-side.
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, HEAD, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://shareschool.tn, https://dev.shareschool.tn"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - cdn.shareschool.tn
+      secretName: cdn-shareschool-tls
+  rules:
+    - host: cdn.shareschool.tn
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: seaweedfs-cdn-proxy
+                port:
+                  number: 80

@@ -1,0 +1,10 @@
+kind: Kustomization
+resources:
+  - ./app
+  - migrate-job.yaml
+
+images:
+  - name: ghcr.io/sa8aa/shareschool
+    newTag: placeholder
+  - name: ghcr.io/sa8aa/shareschool-migrate
+    newTag: placeholder

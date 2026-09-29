@@ -1,0 +1,14 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shareschool
+spec:
+  template:
+    spec:
+      containers:
+        - name: shareschool
+          envFrom:
+            - configMapRef:
+                name: shareschool-config
+            - secretRef:
+                name: shareschool-secrets

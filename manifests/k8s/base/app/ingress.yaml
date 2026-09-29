@@ -1,0 +1,22 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shareschool-ingress
+  annotations:
+    # ingress-nginx defaults request bodies to 1 MB, which silently 413s (and
+    # stalls ~60s) on image uploads > 1 MB. Raise it to cover real photos.
+    # Keep this >= the client/server upload cap so the limits agree.
+    nginx.ingress.kubernetes.io/proxy-body-size: "45m"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: shareschool.tn
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: shareschool
+                port:
+                  number: 80
