@@ -14,7 +14,11 @@ spec:
 
     - git:
         repoURL: https://github.com/sa8aa/shareskooll.git
-        branch: dev
+        branch: develop
         includePaths:
           - manifests/k8s
           - manifests/kargo
+
+
+
+          
