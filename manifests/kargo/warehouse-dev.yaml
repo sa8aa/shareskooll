@@ -6,19 +6,15 @@ metadata:
 spec:
   subscriptions:
     - image:
-        repoURL: ghcr.io/sa8aa/shareschool 
+        repoURL: ghcr.io/sa8aa/shareschool
         imageSelectionStrategy: NewestBuild
-        allowTags: "^dev-[a-f0-9]{8}$"
+        allowTagsRegexes:
+          - "^dev-[a-f0-9]{8}$"
         discoveryLimit: 5
-        strictSemvers: false
-
     - git:
         repoURL: https://github.com/sa8aa/shareskooll.git
         branch: develop
         includePaths:
           - manifests/k8s
           - manifests/kargo
-
-
-
           
