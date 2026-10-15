@@ -1,0 +1,92 @@
+name: Frontend Pipeline
+on:
+  push:
+    branches:
+      - develop
+    paths:
+      - 'front/**'
+  pull_request:
+    branches:
+      - develop
+    types: [opened, synchronize, reopened, closed]
+    paths:
+      - 'front/**'
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  sonarqube:
+    if: github.event.action != 'closed' || github.event.pull_request.merged == true
+    uses: ./.github/workflows/sonarqube.yml
+    secrets: inherit
+
+  frontend-build:
+    needs: sonarqube
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          docker system prune -af
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: front/package-lock.json
+
+      - name: Install dependencies
+        working-directory: ./front
+        run: npm ci
+
+      - name: Build project
+        working-directory: ./front
+        run: npm run build
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image (local only, no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: ./front
+          file: ./front/Dockerfile
+          push: false
+          load: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          tags: |
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:develop
+            ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }}
+
+      - name: Save image to tar
+        run: docker save ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }} -o frontend-image.tar
+
+      - name: Upload image artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-image
+          path: frontend-image.tar
+          retention-days: 1
+
+  trivy-frontend:
+    needs: frontend-build
+    uses: ./.github/workflows/trivy.yml
+    with:
+      service: frontend
+      artifact-name: frontend-image
+      image-tag: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:${{ github.sha }}
+      image-tag-develop: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:develop
+      report-name: trivy-frontend-report
+    secrets: inherit

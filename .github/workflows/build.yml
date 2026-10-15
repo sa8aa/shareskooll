@@ -1,0 +1,128 @@
+name: "Build & Push (shareskool)"
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+    # App code only — manifest/doc changes shouldn't trigger an image rebuild
+    # (Kargo's git subscription handles manifest changes separately).
+    paths-ignore:
+      - "manifests/**"
+      - "**.md"
+  workflow_dispatch:
+
+env:
+  IMAGE: ghcr.io/sa8aa/shareschool
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write        # lets GITHUB_TOKEN push to ghcr.io
+    outputs:
+      warehouse: ${{ steps.vars.outputs.warehouse }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compute tag, public URLs and target warehouse
+        id: vars
+        run: |
+          short_sha=$(echo "${{ github.sha }}" | cut -c1-8)
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "tag=main-${short_sha}"                >> "$GITHUB_OUTPUT"
+            echo "site_url=https://shareskool.tn"        >> "$GITHUB_OUTPUT"
+            echo "warehouse=shareskool-prd"              >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=dev-${short_sha}"                  >> "$GITHUB_OUTPUT"
+            echo "site_url=https://dev.shareskool.tn"    >> "$GITHUB_OUTPUT"
+            echo "warehouse=shareskool-dev"              >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ${{ env.IMAGE }}:${{ steps.vars.outputs.tag }}
+          # NEXT_PUBLIC_* are inlined into the client bundle at build time, so
+          # they must be baked here (per-branch), not just set at runtime.
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=${{ steps.vars.outputs.site_url }}
+            NEXT_PUBLIC_SEAWEED_URL=https://cdn.shareskool.tn
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
+          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
+
+      # Migrator image (Dockerfile `migrator` target = builder + Prisma CLI +
+      # migrations + seed scripts). Same tag as the app; run by the PreSync Job.
+      - name: Build and push migrator
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          target: migrator
+          push: true
+          tags: ${{ env.IMAGE }}-migrate:${{ steps.vars.outputs.tag }}
+          build-args: |
+            NEXT_PUBLIC_SITE_URL=${{ steps.vars.outputs.site_url }}
+            NEXT_PUBLIC_SEAWEED_URL=https://cdn.shareskool.tn
+          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
+
+      # Reuse the vulnerability DB warmed daily by trivy.yml (avoids the
+      # ghcr.io/aquasecurity/trivy-db pull rate limit). Falls back to a fresh
+      # download on a cache miss.
+      - name: Restore Trivy DB cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.cache/trivy
+          key: cache-trivy-restore
+          restore-keys: |
+            cache-trivy-
+
+      - name: Scan image with Trivy
+        uses: aquasecurity/trivy-action@0.35.0
+        env:
+          # Pull the private image with the same creds used to push it.
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          image-ref: ${{ env.IMAGE }}:${{ steps.vars.outputs.tag }}
+          format: table
+          # Block the pipeline on main; report-only on develop.
+          exit-code: ${{ github.ref == 'refs/heads/main' && '1' || '0' }}
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
+          trivyignores: .trivyignore
+          cache-dir: ${{ github.workspace }}/.cache/trivy
+
+  # Nudge Kargo to re-scan immediately (it also polls on its own interval).
+  # Runs on the in-cluster ARC runner because kargo.shareskool.tn is private (NetBird).
+  notify-kargo:
+    needs: build-and-push
+    runs-on: arc-runner-set
+    steps:
+      - name: Refresh Kargo warehouse
+        run: |
+          arch=$(uname -m)
+          [ "$arch" = "x86_64" ] && arch=amd64
+          # Kargo CLI version MUST match the Kargo SERVER version (currently v1.8.3),
+          # or `kargo login` fails with a PublicConfig parse error. Bump both together.
+          # -f makes curl fail on a 404 instead of saving the error page as the binary.
+          curl -fL -o kargo "https://github.com/akuity/kargo/releases/download/v1.8.3/kargo-$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
+          chmod +x kargo
+          ./kargo login "${{ vars.KARGO_URL }}" --admin --password "${{ secrets.KARGO_PASSWORD }}"
+          ./kargo refresh warehouse --project=shareskool-kargo "${{ needs.build-and-push.outputs.warehouse }}"

@@ -1,0 +1,9 @@
+kind: Kustomization
+resources:
+  - secrets.yaml
+  - configmap.yaml
+  - ../../base
+
+patchesStrategicMerge:
+  - app-patch.yaml
+  - ingress-patch.yaml

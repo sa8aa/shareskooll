@@ -1,0 +1,77 @@
+name: Scheduled Trivy Scan
+
+on:
+  schedule:
+    - cron: '0 0 * * *'   
+  workflow_dispatch:        
+
+permissions:
+  contents: read
+  packages: read
+
+jobs:
+  scan-backend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull backend image
+        run: docker pull ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:develop
+
+      - name: Download Trivy HTML template
+        run: curl -sSL -o contrib/html.tpl --create-dirs https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
+
+      - name: Trivy vulnerability scan (backend)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-backend:develop
+          format: template
+          template: '@contrib/html.tpl'
+          output: trivy-backend-scheduled-report.html
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      - name: Upload Trivy report (backend)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-backend-scheduled-report
+          path: trivy-backend-scheduled-report.html
+
+  scan-frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull frontend image
+        run: docker pull ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:develop
+
+      - name: Download Trivy HTML template
+        run: curl -sSL -o contrib/html.tpl --create-dirs https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
+
+      - name: Trivy vulnerability scan (frontend)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-frontend:develop
+          format: template
+          template: '@contrib/html.tpl'
+          output: trivy-frontend-scheduled-report.html
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+
+      - name: Upload Trivy report (frontend)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trivy-frontend-scheduled-report
+          path: trivy-frontend-scheduled-report.html

@@ -1,0 +1,8 @@
+resources:
+  - project.yaml
+  - secrets.yaml
+  - warehouse-prd.yaml
+  - promotion-task.yaml
+  - stage-prd.yaml
+  - warehouse-dev.yaml
+  - stage-dev.yaml

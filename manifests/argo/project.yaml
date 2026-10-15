@@ -1,0 +1,15 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: shareschool-project
+  namespace: argocd
+spec:
+  description: shareschool app project
+  sourceRepos:
+    - "*" # Permet tous les dépôts
+  destinations:
+    - namespace: "*"
+      server: "*" # Permet tous les clusters
+  clusterResourceWhitelist:
+    - group: "*"
+      kind: "*" # Permet tous les types de ressources

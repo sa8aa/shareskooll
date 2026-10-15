@@ -1,0 +1,21 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Warehouse
+metadata:
+  name: shareschool-prd
+  namespace: shareschool-kargo
+spec:
+  subscriptions:
+    - image:
+        repoURL: ghcr.io/sa8aa/shareskooll-frontend
+        imageSelectionStrategy: NewestBuild
+        allowTagsRegexes:
+          - "^[a-f0-9]{40}$"
+        discoveryLimit: 5
+        strictSemvers: false
+
+    - git:
+        repoURL: https://github.com/sa8aa/shareskooll.git
+        branch: main
+        includePaths:
+          - manifests/k8s
+          - manifests/kargo

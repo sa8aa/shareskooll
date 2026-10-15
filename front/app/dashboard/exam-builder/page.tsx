@@ -262,7 +262,7 @@ function ExamBuilderInner() {
             for (let i = 1; i <= totalPages; i++) {
               pdf.setPage(i);
               pdf.saveGraphicsState();
-              pdf.setGState(new pdf.GState({ opacity: template.watermarkOpacity || 0.1 }));
+              pdf.setGState(new (pdf as any).GState({ opacity: template.watermarkOpacity || 0.1 }));
               pdf.text(template.watermarkText, pdfWidth / 2, pdfHeight / 2, {
                 align: "center",
                 angle: 45,

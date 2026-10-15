@@ -1,6 +1,16 @@
 # Backend Dockerfile for NestJS
 
-FROM node:20-alpine AS development
+FROM node:22-alpine AS development
+
+RUN apk add --no-cache \
+    python3 \
+    make \
+    g++ \
+    cairo-dev \
+    jpeg-dev \
+    pango-dev \
+    giflib-dev \
+    pixman-dev
 
 # Set working directory
 WORKDIR /app

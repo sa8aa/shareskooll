@@ -243,7 +243,7 @@ export default function LibraryPage() {
 
       if (response.ok) {
         const data = await response.json();
-        const purchasedIds = new Set(data.purchases.map((p: any) => p.documentId));
+        const purchasedIds = new Set<string>(data.purchases.map((p: any) => p.documentId));
         setPurchasedDocuments(purchasedIds);
       }
     } catch (error) {

@@ -1,0 +1,10 @@
+kind: Kustomization
+resources:
+  - ./app
+  - migrate-job.yaml
+
+images:
+  - name: ghcr.io/sa8aa/shareskooll-frontend
+    newTag: placeholder
+  - name: ghcr.io/sa8aa/shareskooll-frontend-migrate
+    newTag: placeholder

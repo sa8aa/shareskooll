@@ -1,0 +1,18 @@
+apiVersion: kargo.akuity.io/v1alpha1
+kind: Stage
+metadata:
+  name: prd
+  namespace: shareschool-kargo
+spec:
+  requestedFreight:
+    - origin:
+        kind: Warehouse
+        name: shareschool-prd
+      sources:
+        direct: true
+  promotionTemplate:
+    spec:
+      steps:
+        - task:
+            name: promo-process-prd
+          as: promo-process-prd

@@ -1,0 +1,81 @@
+name: Trivy Vulnerability Scan
+
+on:
+  workflow_call:
+    inputs:
+      service:
+        required: true
+        type: string
+      artifact-name:
+        required: true
+        type: string
+      image-tag:
+        required: true
+        type: string
+      image-tag-develop:
+        required: true
+        type: string
+      report-name:
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  trivy-scan-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download image artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ inputs.artifact-name }}
+
+      - name: Load image into Docker
+        run: docker load -i ${{ inputs.artifact-name }}.tar
+
+      - name: Download Trivy HTML template
+        run: curl -sSL -o contrib/html.tpl --create-dirs https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
+
+      # Reuse the vulnerability DB warmed nightly by trivy-cache.yml (avoids the
+      # ghcr.io/aquasecurity/trivy-db pull rate limit). Falls back to a fresh
+      # download on a cache miss.
+      - name: Restore Trivy DB cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.cache/trivy
+          key: cache-trivy-restore
+          restore-keys: |
+            cache-trivy-
+
+      - name: Trivy vulnerability scan (${{ inputs.service }})
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ inputs.image-tag }}
+          format: template
+          template: '@contrib/html.tpl'
+          output: ${{ inputs.report-name }}.html
+          severity: CRITICAL,HIGH
+          exit-code: '1'
+          cache-dir: ${{ github.workspace }}/.cache/trivy
+
+      - name: Upload Trivy report (${{ inputs.service }})
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.report-name }}
+          path: ${{ inputs.report-name }}.html
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Push Docker image (${{ inputs.service }})
+        run: |
+          docker push ${{ inputs.image-tag }}
+          docker tag ${{ inputs.image-tag }} ${{ inputs.image-tag-develop }}
+          docker push ${{ inputs.image-tag-develop }}
