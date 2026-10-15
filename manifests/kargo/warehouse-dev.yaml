@@ -6,10 +6,10 @@ metadata:
 spec:
   subscriptions:
     - image:
-        repoURL: ghcr.io/sa8aa/shareschool
+        repoURL: ghcr.io/sa8aa/shareskooll-frontend
         imageSelectionStrategy: NewestBuild
         allowTagsRegexes:
-          - "^dev-[a-f0-9]{8}$"
+          - "^[a-f0-9]{40}$"
         discoveryLimit: 5
     - git:
         repoURL: https://github.com/sa8aa/shareskooll.git

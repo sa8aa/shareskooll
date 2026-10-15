@@ -8,7 +8,7 @@ spec:
     - name: gitopsRepo
       value: https://github.com/sa8aa/shareskooll.git   
     - name: imageRepo
-      value: ghcr.io/sa8aa/shareschool                      
+      value: ghcr.io/sa8aa/shareskooll-frontend                      
     - name: sourceBranch
       value: main
 
@@ -33,8 +33,6 @@ spec:
         path: ./src/manifests/k8s/base
         images:
           - image: ${{ vars.imageRepo }}
-            tag: ${{ imageFrom(vars.imageRepo).Tag }}
-          - image: ${{ vars.imageRepo }}-migrate
             tag: ${{ imageFrom(vars.imageRepo).Tag }}
 
     - uses: kustomize-build
@@ -71,7 +69,7 @@ spec:
     - name: gitopsRepo
       value: https://github.com/sa8aa/shareskooll.git   # confirm with `git remote -v`
     - name: imageRepo
-      value: ghcr.io/sa8aa/shareschool                      # must match the image in ghcr.io
+      value: ghcr.io/sa8aa/shareskooll-frontend                      # must match the image in ghcr.io
     - name: sourceBranch
       value: dev
 
@@ -96,8 +94,6 @@ spec:
         path: ./src/manifests/k8s/base
         images:
           - image: ${{ vars.imageRepo }}
-            tag: ${{ imageFrom(vars.imageRepo).Tag }}
-          - image: ${{ vars.imageRepo }}-migrate
             tag: ${{ imageFrom(vars.imageRepo).Tag }}
 
     - uses: kustomize-build

@@ -16,7 +16,7 @@ spec:
       containers:
         - name: migrate
           # Tag set by kustomize/Kargo to match the app image.
-          image: ghcr.io/sa8aa/shareschool-migrate
+          image: ghcr.io/sa8aa/shareskooll-frontend-migrate
           # Migrate, then seed reference data. Seeds are idempotent upserts, so
           # re-running every sync is safe. Scripts run directly (no `--env-file`;
           # .env isn't in the image — DATABASE_URL comes from envFrom).

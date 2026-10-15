@@ -15,7 +15,7 @@ spec:
       # /etc/rancher/k3s/registries.yaml — no per-namespace pull Secret needed.
       containers:
         - name: shareschool
-          image: ghcr.io/sa8aa/shareschool
+          image: ghcr.io/sa8aa/shareskooll-frontend
           resources:
             requests:
               memory: "128Mi"
