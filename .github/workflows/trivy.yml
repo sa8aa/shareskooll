@@ -1,4 +1,5 @@
 name: Trivy Vulnerability Scan
+
 on:
   workflow_call:
     inputs:
@@ -37,6 +38,17 @@ jobs:
       - name: Download Trivy HTML template
         run: curl -sSL -o contrib/html.tpl --create-dirs https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/html.tpl
 
+      # Reuse the vulnerability DB warmed nightly by trivy-cache.yml (avoids the
+      # ghcr.io/aquasecurity/trivy-db pull rate limit). Falls back to a fresh
+      # download on a cache miss.
+      - name: Restore Trivy DB cache
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ github.workspace }}/.cache/trivy
+          key: cache-trivy-restore
+          restore-keys: |
+            cache-trivy-
+
       - name: Trivy vulnerability scan (${{ inputs.service }})
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -46,6 +58,7 @@ jobs:
           output: ${{ inputs.report-name }}.html
           severity: CRITICAL,HIGH
           exit-code: '1'
+          cache-dir: ${{ github.workspace }}/.cache/trivy
 
       - name: Upload Trivy report (${{ inputs.service }})
         if: always()
