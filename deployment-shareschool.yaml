@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shareschool
+spec:
+  selector:
+    matchLabels:
+      app: shareschool
+  template:
+    metadata:
+      labels:
+        app: shareschool
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: shareschool-config
+        - secretRef:
+            name: shareschool-secrets
+        image: ghcr.io/sa8aa/shareskooll-frontend:9b59eb8381a4d514d998514867fd0adb11ac9916
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          tcpSocket:
+            port: 3000
+          timeoutSeconds: 5
+        name: shareschool
+        ports:
+        - containerPort: 3000
+        readinessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          tcpSocket:
+            port: 3000
+          timeoutSeconds: 3
+        resources:
+          limits:
+            cpu: "2"
+            memory: 1500Mi
+          requests:
+            cpu: 100m
+            memory: 128Mi
