@@ -1,0 +1,20 @@
+apiVersion: v1
+data:
+  BETTER_AUTH_TRUSTED_ORIGINS: https://shareschool.tn,https://www.shareschool.tn
+  BETTER_AUTH_URL: https://shareschool.tn
+  DB_POOL_MAX: "20"
+  LOGIN_API_MOCK: "true"
+  NEXT_PUBLIC_SEAWEED_URL: https://cdn.shareschool.tn
+  NEXT_PUBLIC_SITE_URL: https://shareschool.tn
+  NEXTAUTH_URL: https://shareschool.tn
+  NODE_ENV: production
+  OTP_EXPIRES_MINUTES: "10"
+  OTP_MAX_ATTEMPTS: "5"
+  SEAWEED_FILER_URL: http://seaweedfs.seaweedfs.svc:8888
+  SMS_MAX_PER_WINDOW: "3"
+  SMS_MOCK: "true"
+  SMS_WINDOW_MINUTES: "60"
+  TZ: Africa/Tunis
+kind: ConfigMap
+metadata:
+  name: shareschool-config
