@@ -71,7 +71,7 @@ spec:
     - name: imageRepo
       value: ghcr.io/sa8aa/shareskooll-frontend                      # must match the image in ghcr.io
     - name: sourceBranch
-      value: dev
+      value: develop
 
   steps:
     - uses: git-clone
