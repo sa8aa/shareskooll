@@ -1,12 +1,12 @@
 apiVersion: v1
 data:
-  BETTER_AUTH_TRUSTED_ORIGINS: https://dev.shareschool.tn,https://www.dev.shareschool.tn
-  BETTER_AUTH_URL: https://dev.shareschool.tn
+  BETTER_AUTH_TRUSTED_ORIGINS: https://dev.shareschool.net,https://www.dev.shareschool.net
+  BETTER_AUTH_URL: https://dev.shareschool.net
   DB_POOL_MAX: "20"
   LOGIN_API_MOCK: "true"
-  NEXT_PUBLIC_SEAWEED_URL: https://cdn.shareschool.tn
-  NEXT_PUBLIC_SITE_URL: https://dev.shareschool.tn
-  NEXTAUTH_URL: https://dev.shareschool.tn
+  NEXT_PUBLIC_SEAWEED_URL: https://cdn.shareschool.net
+  NEXT_PUBLIC_SITE_URL: https://dev.shareschool.net
+  NEXTAUTH_URL: https://dev.shareschool.net
   NODE_ENV: production
   OTP_EXPIRES_MINUTES: "10"
   OTP_MAX_ATTEMPTS: "5"

@@ -17,7 +17,7 @@ spec:
             name: shareschool-config
         - secretRef:
             name: shareschool-secrets
-        image: ghcr.io/sa8aa/shareskooll-frontend:9b59eb8381a4d514d998514867fd0adb11ac9916
+        image: ghcr.io/sa8aa/shareskooll-frontend:d6c3c3eaa8c3bf6c6d1a27d09875750e53544b6f
         livenessProbe:
           failureThreshold: 3
           initialDelaySeconds: 30

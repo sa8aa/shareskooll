@@ -10,7 +10,7 @@ metadata:
 spec:
   ingressClassName: nginx
   rules:
-  - host: dev.shareschool.tn
+  - host: dev.shareschool.net
     http:
       paths:
       - backend:
@@ -22,5 +22,5 @@ spec:
         pathType: Prefix
   tls:
   - hosts:
-    - dev.shareschool.tn
+    - dev.shareschool.net
     secretName: shareschool-dev-tls
