@@ -1,6 +1,6 @@
 # Read-only "guard" in front of the SeaweedFS filer.
 #
-# Why this exists: cdn.shareschool.tn is public. The SeaweedFS filer HTTP API on :8888
+# Why this exists: cdn.shareschool.net is public. The SeaweedFS filer HTTP API on :8888
 # happily serves GET *and* accepts PUT/POST/DELETE. We must NOT expose writes to
 # the internet. The natural place to block methods (an ingress-nginx
 # `configuration-snippet`) is rejected by ingress-nginx v1.15 (snippets disabled

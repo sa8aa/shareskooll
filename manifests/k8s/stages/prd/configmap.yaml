@@ -5,15 +5,15 @@ metadata:
 data:
   NODE_ENV: "production"
 
-  # Public URLs (this stage = shareschool.tn). NEXT_PUBLIC_* are baked into the client
+  # Public URLs (this stage = shareschool.net). NEXT_PUBLIC_* are baked into the client
   # bundle at image build time; set here too for server-side reads.
-  NEXTAUTH_URL: "https://shareschool.tn"
-  BETTER_AUTH_URL: "https://shareschool.tn"
+  NEXTAUTH_URL: "https://shareschool.net"
+  BETTER_AUTH_URL: "https://shareschool.net"
   # Extra origins Better Auth should accept beyond BETTER_AUTH_URL (comma-separated).
-  BETTER_AUTH_TRUSTED_ORIGINS: "https://shareschool.tn,https://www.shareschool.tn"
-  NEXT_PUBLIC_SITE_URL: "https://shareschool.tn"
+  BETTER_AUTH_TRUSTED_ORIGINS: "https://shareschool.net,https://www.shareschool.net"
+  NEXT_PUBLIC_SITE_URL: "https://shareschool.net"
   # Public read-only CDN host (ingress in front of the shared filer).
-  NEXT_PUBLIC_SEAWEED_URL: "https://cdn.shareschool.tn"
+  NEXT_PUBLIC_SEAWEED_URL: "https://cdn.shareschool.net"
 
   # In-cluster SeaweedFS filer (server-side PUTs) — shared instance in the
   # `seaweedfs` namespace, reached cross-namespace by FQDN.

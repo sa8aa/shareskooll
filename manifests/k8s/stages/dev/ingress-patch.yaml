@@ -10,10 +10,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - dev.shareschool.tn
+        - dev.shareschool.net
       secretName: shareschool-dev-tls
   rules:
-    - host: dev.shareschool.tn
+    - host: dev.shareschool.net
       http:
         paths:
           - pathType: Prefix
