@@ -15,8 +15,6 @@ spec:
       - envFrom:
         - configMapRef:
             name: shareschool-config
-        - secretRef:
-            name: shareschool-secrets
         image: ghcr.io/sa8aa/shareskooll-frontend:d6c3c3eaa8c3bf6c6d1a27d09875750e53544b6f
         livenessProbe:
           failureThreshold: 3
