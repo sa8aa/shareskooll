@@ -5,14 +5,22 @@ on:
 jobs:
   sonarqube-scan:
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
+      # Non-blocking: a Sonar outage, expired token or a PR without secrets
+      # (forks, Dependabot) must not stop the build jobs that depend on this.
       - name: SonarQube Scan
+        if: env.SONAR_TOKEN != ''
+        continue-on-error: true
         uses: SonarSource/sonarqube-scan-action@v4
-        env:
-          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Sonar skipped (no SONAR_TOKEN available)
+        if: env.SONAR_TOKEN == ''
+        run: echo "::warning::SONAR_TOKEN is not available in this run; Sonar scan skipped."
