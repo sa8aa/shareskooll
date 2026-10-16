@@ -1,10 +1,11 @@
 kind: Kustomization
 resources:
   - ./app
-  - migrate-job.yaml
+  - ./backend
+  - ./redis
 
 images:
   - name: ghcr.io/sa8aa/shareskooll-frontend
     newTag: placeholder
-  - name: ghcr.io/sa8aa/shareskooll-frontend-migrate
+  - name: ghcr.io/sa8aa/shareskooll-backend
     newTag: placeholder

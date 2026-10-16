@@ -4,32 +4,29 @@ metadata:
   name: shareschool-config
 data:
   NODE_ENV: "production"
-
-  # Public URLs (this stage = dev.shareschool.net). NEXT_PUBLIC_* are baked into the
-  # client bundle at image build time; set here too for server-side reads.
-  NEXTAUTH_URL: "https://dev.shareschool.net"
-  BETTER_AUTH_URL: "https://dev.shareschool.net"
-  # Extra origins Better Auth should accept beyond BETTER_AUTH_URL (comma-separated).
-  BETTER_AUTH_TRUSTED_ORIGINS: "https://dev.shareschool.net,https://www.dev.shareschool.net"
-  NEXT_PUBLIC_SITE_URL: "https://dev.shareschool.net"
-  # Public read-only CDN host (ingress in front of the shared filer).
-  NEXT_PUBLIC_SEAWEED_URL: "https://cdn.shareschool.net"
-
-  # In-cluster SeaweedFS filer (server-side PUTs) — shared instance in the
-  # `seaweedfs` namespace, reached cross-namespace by FQDN.
-  SEAWEED_FILER_URL: "http://seaweedfs.seaweedfs.svc:8888"
-
-  # OTP / SMS (WhatsApp via Twilio). SMS_MOCK=true logs the OTP instead of
-  # sending; set false once Twilio creds are in the Secret.
-  SMS_MOCK: "true"
-  OTP_EXPIRES_MINUTES: "10"
-  OTP_MAX_ATTEMPTS: "5"
-  SMS_WINDOW_MINUTES: "60"
-  SMS_MAX_PER_WINDOW: "3"
-
-  # Log-In delivery API (mock returns fake tracking; unset LOGIN_API_URL falls
-  # back to the provider's public dev endpoint).
-  LOGIN_API_MOCK: "true"
-
-  DB_POOL_MAX: "20"
   TZ: "Africa/Tunis"
+  # NEXT_PUBLIC_* are baked into the client bundle at image build time
+  # (see .github/workflows/build.yml); listed here for reference only.
+  NEXT_PUBLIC_SITE_URL: "https://dev.shareschool.net"
+  NEXT_PUBLIC_API_URL: "https://api-dev.shareschool.net"
+  NEXT_PUBLIC_SEAWEED_URL: "https://cdn.shareschool.net"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: shareschool-backend-config
+data:
+  NODE_ENV: "production"
+  PORT: "3000"
+  TZ: "Africa/Tunis"
+  # CORS origin + socket.io origin (single value).
+  FRONTEND_URL: "https://dev.shareschool.net"
+  BACKEND_URL: "https://api-dev.shareschool.net"
+  # Same Postgres cluster as before (CloudNativePG, pgvector already installed).
+  DATABASE_HOST: "postgres-rw.database.svc"
+  DATABASE_PORT: "5432"
+  DATABASE_NAME: "shareskool_dev"
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  # Shared SeaweedFS filer in the `seaweedfs` namespace.
+  SEAWEED_FILER_URL: "http://seaweedfs.seaweedfs.svc:8888"

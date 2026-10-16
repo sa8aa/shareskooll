@@ -1,0 +1,39 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shareschool-backend
+spec:
+  selector:
+    matchLabels:
+      app: shareschool-backend
+  template:
+    metadata:
+      labels:
+        app: shareschool-backend
+    spec:
+      containers:
+        - name: backend
+          image: ghcr.io/sa8aa/shareskooll-backend
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "1500Mi"
+              cpu: "2"
+          ports:
+            - containerPort: 3000
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 3
+            failureThreshold: 6

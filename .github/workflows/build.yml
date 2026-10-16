@@ -1,4 +1,4 @@
-name: "Build & Push (shareskool)"
+name: "Build & Push (shareschool)"
 
 on:
   push:
@@ -12,34 +12,54 @@ on:
       - "**.md"
   workflow_dispatch:
 
-env:
-  # Must match manifests/k8s/base and the Kargo warehouses.
-  IMAGE: ghcr.io/sa8aa/shareskooll-frontend
-
 jobs:
+  # Computed once so both images and the Kargo refresh agree.
+  vars:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      branch_tag: ${{ steps.v.outputs.branch_tag }}
+      site_url: ${{ steps.v.outputs.site_url }}
+      api_url: ${{ steps.v.outputs.api_url }}
+      warehouse: ${{ steps.v.outputs.warehouse }}
+    steps:
+      - id: v
+        run: |
+          # Kargo warehouses filter on the tag: dev takes ^[a-f0-9]{40}$,
+          # prd takes ^main-[a-f0-9]{40}$, so a develop build never becomes prd freight.
+          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            echo "tag=main-${{ github.sha }}"            >> "$GITHUB_OUTPUT"
+            echo "branch_tag=main"                       >> "$GITHUB_OUTPUT"
+            echo "site_url=https://shareschool.net"      >> "$GITHUB_OUTPUT"
+            echo "api_url=https://api.shareschool.net"   >> "$GITHUB_OUTPUT"
+            echo "warehouse=shareschool-prd"             >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.sha }}"                      >> "$GITHUB_OUTPUT"
+            echo "branch_tag=develop"                         >> "$GITHUB_OUTPUT"
+            echo "site_url=https://dev.shareschool.net"       >> "$GITHUB_OUTPUT"
+            echo "api_url=https://api-dev.shareschool.net"    >> "$GITHUB_OUTPUT"
+            echo "warehouse=shareschool-dev"                  >> "$GITHUB_OUTPUT"
+          fi
+
   build-and-push:
+    needs: vars
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write        # lets GITHUB_TOKEN push to ghcr.io
-    outputs:
-      warehouse: ${{ steps.vars.outputs.warehouse }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: frontend
+            context: ./front
+            image: ghcr.io/sa8aa/shareskooll-frontend
+          - service: backend
+            context: ./backend
+            image: ghcr.io/sa8aa/shareskooll-backend
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Compute tag, public URLs and target warehouse
-        id: vars
-        run: |
-          # Full 40-char SHA: the Kargo warehouses only accept ^[a-f0-9]{40}$.
-          echo "tag=${{ github.sha }}" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.ref }}" = "refs/heads/main" ]; then
-            echo "site_url=https://shareschool.net"       >> "$GITHUB_OUTPUT"
-            echo "warehouse=shareschool-prd"             >> "$GITHUB_OUTPUT"
-          else
-            echo "site_url=https://dev.shareschool.net"   >> "$GITHUB_OUTPUT"
-            echo "warehouse=shareschool-dev"             >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Login to GHCR
         uses: docker/login-action@v3
@@ -51,22 +71,25 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push
+      - name: Build and push (${{ matrix.service }})
         uses: docker/build-push-action@v6
         with:
-          context: ./front
-          file: ./front/Dockerfile
+          context: ${{ matrix.context }}
+          file: ${{ matrix.context }}/Dockerfile
           push: true
-          tags: ${{ env.IMAGE }}:${{ steps.vars.outputs.tag }}
+          tags: |
+            ${{ matrix.image }}:${{ needs.vars.outputs.tag }}
+            ${{ matrix.image }}:${{ needs.vars.outputs.branch_tag }}
           # NEXT_PUBLIC_* are inlined into the client bundle at build time, so
-          # they must be baked here (per-branch), not just set at runtime.
+          # they must be baked here (per-branch). The backend ignores them.
           build-args: |
-            NEXT_PUBLIC_SITE_URL=${{ steps.vars.outputs.site_url }}
+            NEXT_PUBLIC_SITE_URL=${{ needs.vars.outputs.site_url }}
+            NEXT_PUBLIC_API_URL=${{ needs.vars.outputs.api_url }}
             NEXT_PUBLIC_SEAWEED_URL=https://cdn.shareschool.net
-          cache-from: type=registry,ref=${{ env.IMAGE }}:buildcache
-          cache-to: type=registry,ref=${{ env.IMAGE }}:buildcache,mode=max
+          cache-from: type=registry,ref=${{ matrix.image }}:buildcache
+          cache-to: type=registry,ref=${{ matrix.image }}:buildcache,mode=max
 
-      # Reuse the vulnerability DB warmed daily by trivy.yml (avoids the
+      # Reuse the vulnerability DB warmed daily by trivy-cache.yml (avoids the
       # ghcr.io/aquasecurity/trivy-db pull rate limit). Falls back to a fresh
       # download on a cache miss.
       - name: Restore Trivy DB cache
@@ -77,14 +100,14 @@ jobs:
           restore-keys: |
             cache-trivy-
 
-      - name: Scan image with Trivy
+      - name: Scan image with Trivy (${{ matrix.service }})
         uses: aquasecurity/trivy-action@v0.36.0
         env:
           # Pull the private image with the same creds used to push it.
           TRIVY_USERNAME: ${{ github.actor }}
           TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
         with:
-          image-ref: ${{ env.IMAGE }}:${{ steps.vars.outputs.tag }}
+          image-ref: ${{ matrix.image }}:${{ needs.vars.outputs.tag }}
           format: table
           # Block the pipeline on main; report-only on develop.
           exit-code: ${{ github.ref == 'refs/heads/main' && '1' || '0' }}
@@ -94,9 +117,9 @@ jobs:
           cache-dir: ${{ github.workspace }}/.cache/trivy
 
   # Nudge Kargo to re-scan immediately (it also polls on its own interval).
-  # Runs on the in-cluster ARC runner because kargo.shareschool.net is private (NetBird).
+  # Runs on the in-cluster ARC runner because Kargo is private (NetBird).
   notify-kargo:
-    needs: build-and-push
+    needs: [vars, build-and-push]
     runs-on: arc-runner-set
     steps:
       - name: Refresh Kargo warehouse
@@ -109,4 +132,4 @@ jobs:
           curl -fL -o kargo "https://github.com/akuity/kargo/releases/download/v1.8.3/kargo-$(uname -s | tr '[:upper:]' '[:lower:]')-${arch}"
           chmod +x kargo
           ./kargo login "${{ vars.KARGO_URL }}" --admin --password "${{ secrets.KARGO_PASSWORD }}"
-          ./kargo refresh warehouse --project=shareschool-kargo "${{ needs.build-and-push.outputs.warehouse }}"
+          ./kargo refresh warehouse --project=shareschool-kargo "${{ needs.vars.outputs.warehouse }}"

@@ -10,5 +10,18 @@ spec:
           envFrom:
             - configMapRef:
                 name: shareschool-config
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shareschool-backend
+spec:
+  template:
+    spec:
+      containers:
+        - name: backend
+          envFrom:
+            - configMapRef:
+                name: shareschool-backend-config
             - secretRef:
-                name: shareschool-secrets
+                name: shareschool-backend-secrets

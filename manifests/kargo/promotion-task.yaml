@@ -6,9 +6,11 @@ metadata:
 spec:
   vars:
     - name: gitopsRepo
-      value: https://github.com/sa8aa/shareskooll.git   
-    - name: imageRepo
-      value: ghcr.io/sa8aa/shareskooll-frontend                      
+      value: https://github.com/sa8aa/shareskooll.git
+    - name: frontendRepo
+      value: ghcr.io/sa8aa/shareskooll-frontend
+    - name: backendRepo
+      value: ghcr.io/sa8aa/shareskooll-backend
     - name: sourceBranch
       value: main
 
@@ -32,8 +34,10 @@ spec:
       config:
         path: ./src/manifests/k8s/base
         images:
-          - image: ${{ vars.imageRepo }}
-            tag: ${{ imageFrom(vars.imageRepo).Tag }}
+          - image: ${{ vars.frontendRepo }}
+            tag: ${{ imageFrom(vars.frontendRepo).Tag }}
+          - image: ${{ vars.backendRepo }}
+            tag: ${{ imageFrom(vars.backendRepo).Tag }}
 
     - uses: kustomize-build
       config:
@@ -67,9 +71,11 @@ metadata:
 spec:
   vars:
     - name: gitopsRepo
-      value: https://github.com/sa8aa/shareskooll.git   # confirm with `git remote -v`
-    - name: imageRepo
-      value: ghcr.io/sa8aa/shareskooll-frontend                      # must match the image in ghcr.io
+      value: https://github.com/sa8aa/shareskooll.git
+    - name: frontendRepo
+      value: ghcr.io/sa8aa/shareskooll-frontend
+    - name: backendRepo
+      value: ghcr.io/sa8aa/shareskooll-backend
     - name: sourceBranch
       value: develop
 
@@ -93,8 +99,10 @@ spec:
       config:
         path: ./src/manifests/k8s/base
         images:
-          - image: ${{ vars.imageRepo }}
-            tag: ${{ imageFrom(vars.imageRepo).Tag }}
+          - image: ${{ vars.frontendRepo }}
+            tag: ${{ imageFrom(vars.frontendRepo).Tag }}
+          - image: ${{ vars.backendRepo }}
+            tag: ${{ imageFrom(vars.backendRepo).Tag }}
 
     - uses: kustomize-build
       config:

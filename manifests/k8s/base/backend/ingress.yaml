@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: shareschool-backend-ingress
+  annotations:
+    # The API accepts JSON bodies and uploads up to 50 MB (see main.ts).
+    nginx.ingress.kubernetes.io/proxy-body-size: "50m"
+    # Socket.IO notifications gateway keeps long-lived connections open.
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: api.shareschool.net
+      http:
+        paths:
+          - pathType: Prefix
+            path: "/"
+            backend:
+              service:
+                name: shareschool-backend
+                port:
+                  number: 80
