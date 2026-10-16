@@ -5,6 +5,8 @@ metadata:
 spec:
   template:
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: shareschool
           envFrom:
@@ -18,6 +20,8 @@ metadata:
 spec:
   template:
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: backend
           envFrom:
