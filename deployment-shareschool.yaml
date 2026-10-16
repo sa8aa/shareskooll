@@ -15,9 +15,7 @@ spec:
       - envFrom:
         - configMapRef:
             name: shareschool-config
-        - secretRef:
-            name: shareschool-secrets
-        image: ghcr.io/sa8aa/shareskooll-frontend:9b59eb8381a4d514d998514867fd0adb11ac9916
+        image: ghcr.io/sa8aa/shareskooll-frontend:main-e968b312b6870f1cb0d2c56c9f72de51a724b264
         livenessProbe:
           failureThreshold: 3
           initialDelaySeconds: 30
@@ -42,3 +40,5 @@ spec:
           requests:
             cpu: 100m
             memory: 128Mi
+      imagePullSecrets:
+      - name: ghcr-pull

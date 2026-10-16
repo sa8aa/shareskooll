@@ -1,0 +1,16 @@
+apiVersion: v1
+data:
+  BACKEND_URL: https://api.shareschool.net
+  DATABASE_HOST: postgres-rw.database.svc
+  DATABASE_NAME: shareskool
+  DATABASE_PORT: "5432"
+  FRONTEND_URL: https://shareschool.net
+  NODE_ENV: production
+  PORT: "3000"
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  SEAWEED_FILER_URL: http://seaweedfs.seaweedfs.svc:8888
+  TZ: Africa/Tunis
+kind: ConfigMap
+metadata:
+  name: shareschool-backend-config

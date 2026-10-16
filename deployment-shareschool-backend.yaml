@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shareschool-backend
+spec:
+  selector:
+    matchLabels:
+      app: shareschool-backend
+  template:
+    metadata:
+      labels:
+        app: shareschool-backend
+    spec:
+      containers:
+      - envFrom:
+        - configMapRef:
+            name: shareschool-backend-config
+        - secretRef:
+            name: shareschool-backend-secrets
+        image: ghcr.io/sa8aa/shareskooll-backend:main-e968b312b6870f1cb0d2c56c9f72de51a724b264
+        livenessProbe:
+          failureThreshold: 3
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          tcpSocket:
+            port: 3000
+          timeoutSeconds: 5
+        name: backend
+        ports:
+        - containerPort: 3000
+        readinessProbe:
+          failureThreshold: 6
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          tcpSocket:
+            port: 3000
+          timeoutSeconds: 3
+        resources:
+          limits:
+            cpu: "2"
+            memory: 1500Mi
+          requests:
+            cpu: 100m
+            memory: 256Mi
+      imagePullSecrets:
+      - name: ghcr-pull
