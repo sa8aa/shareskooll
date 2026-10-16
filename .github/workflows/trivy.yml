@@ -22,6 +22,10 @@ on:
         required: false
         type: boolean
         default: false
+      fail-on-findings:
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -61,7 +65,22 @@ jobs:
           template: '@contrib/html.tpl'
           output: ${{ inputs.report-name }}.html
           severity: CRITICAL,HIGH
-          exit-code: '1'
+          ignore-unfixed: true
+          # Report-only unless the caller opts in; build.yml does the gating on main.
+          exit-code: ${{ inputs.fail-on-findings && '1' || '0' }}
+          cache-dir: ${{ github.workspace }}/.cache/trivy
+
+      # Same findings in the job log, so they are visible without downloading the HTML.
+      - name: Trivy summary (${{ inputs.service }})
+        if: always()
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: ${{ inputs.image-tag }}
+          format: table
+          severity: CRITICAL,HIGH
+          ignore-unfixed: true
+          exit-code: '0'
+          skip-setup-trivy: true
           cache-dir: ${{ github.workspace }}/.cache/trivy
 
       - name: Upload Trivy report (${{ inputs.service }})
