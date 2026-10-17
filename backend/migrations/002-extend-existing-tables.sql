@@ -122,99 +122,10 @@ BEGIN
 END $$;
 
 -- ============================================================
--- 4. CREATE VERIFICATION_REQUESTS TABLE
+-- 4-5. verification_requests and exam_templates are created by migrations
+-- 007 and 023, which match the entities. The earlier definitions that lived
+-- here used different column names and conflicted with them.
 -- ============================================================
-
-CREATE TYPE verification_request_status AS ENUM ('pending', 'approved', 'rejected');
-
-CREATE TABLE IF NOT EXISTS verification_requests (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  status verification_request_status DEFAULT 'pending',
-  
-  -- Submitted documents
-  id_document_url VARCHAR(500),
-  institution_name VARCHAR(255) NOT NULL,
-  institution_type VARCHAR(100) NOT NULL,
-  proof_type VARCHAR(100) NOT NULL,
-  additional_info TEXT,
-  
-  -- Admin review
-  reviewed_by UUID REFERENCES users(id),
-  reviewed_at TIMESTAMP,
-  rejection_reason TEXT,
-  
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Create indexes for verification_requests
-CREATE INDEX IF NOT EXISTS idx_verification_requests_user ON verification_requests(user_id);
-CREATE INDEX IF NOT EXISTS idx_verification_requests_status ON verification_requests(status);
-CREATE INDEX IF NOT EXISTS idx_verification_requests_reviewed_by ON verification_requests(reviewed_by);
-CREATE INDEX IF NOT EXISTS idx_verification_requests_created ON verification_requests(created_at DESC);
-
--- Add check constraints for verification_requests
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint 
-    WHERE conname = 'chk_institution_type'
-  ) THEN
-    ALTER TABLE verification_requests 
-    ADD CONSTRAINT chk_institution_type 
-    CHECK (institution_type IN ('university', 'school', 'institute', 'training_center'));
-  END IF;
-  
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint 
-    WHERE conname = 'chk_proof_type'
-  ) THEN
-    ALTER TABLE verification_requests 
-    ADD CONSTRAINT chk_proof_type 
-    CHECK (proof_type IN ('teacher_id', 'student_id', 'diploma', 'certificate', 'employment_letter'));
-  END IF;
-END $$;
-
--- ============================================================
--- 5. CREATE EXAM_TEMPLATES TABLE
--- ============================================================
-
-CREATE TABLE IF NOT EXISTS exam_templates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  title VARCHAR(255) NOT NULL,
-  class_level VARCHAR(50) NOT NULL,
-  subject_code VARCHAR(50) NOT NULL,
-  topic VARCHAR(255),
-  difficulty VARCHAR(20),
-  question_count INT DEFAULT 0,
-  template_data JSONB,
-  is_published BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Create indexes for exam_templates
-CREATE INDEX IF NOT EXISTS idx_exam_templates_user ON exam_templates(user_id);
-CREATE INDEX IF NOT EXISTS idx_exam_templates_class_level ON exam_templates(class_level);
-CREATE INDEX IF NOT EXISTS idx_exam_templates_subject ON exam_templates(subject_code);
-CREATE INDEX IF NOT EXISTS idx_exam_templates_difficulty ON exam_templates(difficulty);
-CREATE INDEX IF NOT EXISTS idx_exam_templates_published ON exam_templates(is_published);
-CREATE INDEX IF NOT EXISTS idx_exam_templates_created ON exam_templates(created_at DESC);
-
--- Add check constraint for difficulty
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_constraint 
-    WHERE conname = 'chk_difficulty'
-  ) THEN
-    ALTER TABLE exam_templates 
-    ADD CONSTRAINT chk_difficulty 
-    CHECK (difficulty IN ('easy', 'medium', 'hard'));
-  END IF;
-END $$;
 
 -- ============================================================
 -- 6. UPDATE EXISTING DATA (BACKWARD COMPATIBILITY)
@@ -251,6 +162,5 @@ BEGIN
   RAISE NOTICE 'Migration 002 completed successfully:';
   RAISE NOTICE '  - Documents extended: %', documents_updated;
   RAISE NOTICE '  - Users extended: %', users_updated;
-  RAISE NOTICE '  - New tables created: verification_requests, exam_templates';
 END $$;
 
