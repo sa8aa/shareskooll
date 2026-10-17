@@ -1,0 +1,107 @@
+# GitHub Actions Runner Controller (ARC): runs the self-hosted runners that the
+# `notify-kargo` job in .github/workflows/build.yml asks for (runs-on: arc-runner-set).
+#
+# Apply once:  kubectl apply -f manifests/argo/arc.yaml
+# Argo CD then installs and keeps everything in sync.
+#
+# 1. Controller (CRDs + operator)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc-controller
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: shareschool-project
+  source:
+    repoURL: ghcr.io/actions/actions-runner-controller-charts
+    chart: gha-runner-scale-set-controller
+    targetRevision: 0.15.0
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-systems
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
+---
+# 2. GitHub credential (ExternalSecret in the arc-runners namespace)
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc-secret
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: shareschool-project
+  source:
+    repoURL: https://github.com/sa8aa/shareskooll.git
+    targetRevision: HEAD
+    path: manifests/arc
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-runners
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 5m
+---
+# 3. Runner scale set. The Helm release name IS the label used in `runs-on`.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: arc-runner-set
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: shareschool-project
+  source:
+    repoURL: ghcr.io/actions/actions-runner-controller-charts
+    chart: gha-runner-scale-set
+    targetRevision: 0.15.0
+    helm:
+      releaseName: arc-runner-set
+      valuesObject:
+        githubConfigUrl: https://github.com/sa8aa/shareskooll
+        githubConfigSecret: arc-github-secret
+        minRunners: 0
+        maxRunners: 3
+        controllerServiceAccount:
+          namespace: arc-systems
+          name: arc-controller-gha-rs-controller
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: arc-runners
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ServerSideApply=true
+    retry:
+      limit: 10
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m
