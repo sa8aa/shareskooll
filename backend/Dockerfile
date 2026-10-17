@@ -46,6 +46,9 @@ ENV NODE_ENV=production \
 COPY --from=builder --chown=node:node /app/package*.json ./
 COPY --from=builder --chown=node:node /app/node_modules ./node_modules
 COPY --from=builder --chown=node:node /app/dist ./dist
+# Used by the k8s `migrate` initContainer (node scripts/migrate.js).
+COPY --from=builder --chown=node:node /app/migrations ./migrations
+COPY --from=builder --chown=node:node /app/scripts ./scripts
 USER node
 EXPOSE 3000
 CMD ["node", "dist/main"]

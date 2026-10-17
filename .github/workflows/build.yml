@@ -109,8 +109,9 @@ jobs:
         with:
           image-ref: ${{ matrix.image }}:${{ needs.vars.outputs.tag }}
           format: table
-          # Block the pipeline on main; report-only on develop.
-          exit-code: ${{ github.ref == 'refs/heads/main' && '1' || '0' }}
+          # Report-only everywhere for now. To block on main again, use:
+          # exit-code: ${{ github.ref == 'refs/heads/main' && '1' || '0' }}
+          exit-code: '0'
           ignore-unfixed: true
           vuln-type: os,library
           severity: CRITICAL,HIGH

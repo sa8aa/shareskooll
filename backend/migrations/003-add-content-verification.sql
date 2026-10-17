@@ -18,9 +18,4 @@ SET verification_status = 'approved',
 WHERE status = 'completed' 
   AND verification_status = 'pending';
 
--- Add verification fields to verification_requests table (if missing)
-ALTER TABLE verification_requests
-ADD COLUMN IF NOT EXISTS verification_video_url VARCHAR(500),
-ADD COLUMN IF NOT EXISTS verification_code VARCHAR(50);
-
-COMMIT;
+-- verification_requests (with "verificationVideoUrl"/"verificationCode") is created by migration 007.

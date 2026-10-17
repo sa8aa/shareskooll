@@ -25,6 +25,26 @@ jobs:
   backend-build:
     needs: sonarqube
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: ci
+          POSTGRES_PASSWORD: ci
+          POSTGRES_DB: ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ci -d ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_HOST: localhost
+      DATABASE_PORT: 5432
+      DATABASE_USER: ci
+      DATABASE_PASSWORD: ci
+      DATABASE_NAME: ci
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -53,6 +73,20 @@ jobs:
       - name: Build project
         working-directory: ./backend
         run: npm run build
+
+      # Migrations must build the whole schema from an empty database, be re-runnable,
+      # and leave every table/column the entities need.
+      - name: Migrations apply to an empty database
+        working-directory: ./backend
+        run: npm run migrate
+
+      - name: Migrations are idempotent
+        working-directory: ./backend
+        run: npm run migrate
+
+      - name: Schema matches entities
+        working-directory: ./backend
+        run: npm run check-schema
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

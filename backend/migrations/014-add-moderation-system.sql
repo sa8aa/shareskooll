@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS extracted_questions (
   rejection_reason TEXT,
   
   -- Question Bank Integration
-  question_bank_id UUID REFERENCES questions(id),
+  question_bank_id UUID, -- no "questions" table exists; FK removed so this applies on a fresh database
   added_to_bank_at TIMESTAMP,
   
   -- Timestamps

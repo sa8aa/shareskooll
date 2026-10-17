@@ -22,6 +22,13 @@ spec:
     spec:
       imagePullSecrets:
         - name: ghcr-pull
+      initContainers:
+        - name: migrate
+          envFrom:
+            - configMapRef:
+                name: shareschool-backend-config
+            - secretRef:
+                name: shareschool-backend-secrets
       containers:
         - name: backend
           envFrom:
