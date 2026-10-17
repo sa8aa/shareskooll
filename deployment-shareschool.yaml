@@ -15,7 +15,7 @@ spec:
       - envFrom:
         - configMapRef:
             name: shareschool-config
-        image: ghcr.io/sa8aa/shareskooll-frontend:3a5fcbe56ecf5e5d01595a1d674d19e4d1e1d81c
+        image: ghcr.io/sa8aa/shareskooll-frontend:102f658df11e3b624d1f599a879cdc0dad34069c
         livenessProbe:
           failureThreshold: 3
           initialDelaySeconds: 30
