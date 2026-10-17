@@ -11,6 +11,21 @@ spec:
       labels:
         app: shareschool-backend
     spec:
+      initContainers:
+        # Brings the database schema up to date before the app starts. Uses the same image
+        # (tag is set for both containers by the kustomize `images:` entry), so schema and
+        # code always ship together. Safe with several replicas: runners queue on a Postgres
+        # advisory lock. A failure leaves the pod in Init:Error and the old pods keep serving.
+        - name: migrate
+          image: ghcr.io/sa8aa/shareskooll-backend
+          command: ["node", "scripts/migrate.js"]
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
       containers:
         - name: backend
           image: ghcr.io/sa8aa/shareskooll-backend
