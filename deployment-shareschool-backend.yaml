@@ -17,7 +17,7 @@ spec:
             name: shareschool-backend-config
         - secretRef:
             name: shareschool-backend-secrets
-        image: ghcr.io/sa8aa/shareskooll-backend:3a5fcbe56ecf5e5d01595a1d674d19e4d1e1d81c
+        image: ghcr.io/sa8aa/shareskooll-backend:102f658df11e3b624d1f599a879cdc0dad34069c
         livenessProbe:
           failureThreshold: 3
           initialDelaySeconds: 30
@@ -44,3 +44,21 @@ spec:
             memory: 256Mi
       imagePullSecrets:
       - name: ghcr-pull
+      initContainers:
+      - command:
+        - node
+        - scripts/migrate.js
+        envFrom:
+        - configMapRef:
+            name: shareschool-backend-config
+        - secretRef:
+            name: shareschool-backend-secrets
+        image: ghcr.io/sa8aa/shareskooll-backend:102f658df11e3b624d1f599a879cdc0dad34069c
+        name: migrate
+        resources:
+          limits:
+            cpu: 500m
+            memory: 256Mi
+          requests:
+            cpu: 50m
+            memory: 64Mi
