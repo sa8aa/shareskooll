@@ -17,7 +17,7 @@ spec:
             name: shareschool-backend-config
         - secretRef:
             name: shareschool-backend-secrets
-        image: ghcr.io/sa8aa/shareskooll-backend:102f658df11e3b624d1f599a879cdc0dad34069c
+        image: ghcr.io/sa8aa/shareskooll-backend:2db193b529bf8174219a4cf65f3cba8ed05057fd
         livenessProbe:
           failureThreshold: 3
           initialDelaySeconds: 30
@@ -53,7 +53,7 @@ spec:
             name: shareschool-backend-config
         - secretRef:
             name: shareschool-backend-secrets
-        image: ghcr.io/sa8aa/shareskooll-backend:102f658df11e3b624d1f599a879cdc0dad34069c
+        image: ghcr.io/sa8aa/shareskooll-backend:2db193b529bf8174219a4cf65f3cba8ed05057fd
         name: migrate
         resources:
           limits:
