@@ -40,7 +40,7 @@ export class LeaderboardDto extends TimeRangeDto {
   @IsNumber()
   @Min(1)
   @Max(100)
-  limit?: number = 10;
+  limit?: number = 9;
 
   @IsOptional()
   @IsString()
